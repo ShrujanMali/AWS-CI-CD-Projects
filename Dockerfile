@@ -1,8 +1,28 @@
 FROM python:3.8-slim-buster
+
+# Set workdir
 WORKDIR /app
-COPY . /app
 
-RUN apt update -y && apt install awscli -y
+# System dependencies in one RUN with cleanup
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        awscli \
+        ffmpeg \
+        libsm6 \
+        libxext6 \
+        unzip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 unzip -y && pip install -r requirements.txt
+# Copy only requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Install Python deps
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Then copy rest of app
+COPY . .
+
+# Default command
 CMD ["python3", "app.py"]
